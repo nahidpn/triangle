@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRIANGLE — Deepfake Detection</title>
+<style>
+  :root{
+    --navy:#0f1626; --navy2:#16213e; --copper:#c97b4a; --copper-light:#e8a87c;
+    --green:#10b981; --green-bg:#ecfdf5; --red:#ef4444; --red-bg:#fef2f2;
+    --blue:#3b82f6; --ink:#1a1f2e; --sub:#6b7280; --line:#e5e7eb; --bg:#f4f5f7;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:linear-gradient(135deg,#2a2a3a 0%,#1a1a28 100%);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+
+  /* Laptop frame */
+  .laptop{width:100%;max-width:1100px;}
+  .screen{background:#000;border-radius:14px 14px 0 0;padding:14px 14px 0;
+    box-shadow:0 30px 80px rgba(0,0,0,.5);}
+  .browser{background:var(--bg);border-radius:8px;overflow:hidden;height:660px;display:flex;flex-direction:column;}
+  .laptop-base{height:18px;background:linear-gradient(180deg,#c4c8d0,#9aa0ab);
+    border-radius:0 0 14px 14px;position:relative;}
+  .laptop-base::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:120px;height:8px;background:#7a808c;border-radius:0 0 8px 8px;}
+
+  /* Browser chrome */
+  .chrome{background:#dfe3e8;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .dots{display:flex;gap:7px;}
+  .dot{width:12px;height:12px;border-radius:50%;}
+  .dot.r{background:#ff5f57;} .dot.y{background:#febc2e;} .dot.g{background:#28c840;}
+  .urlbar{flex:1;background:#fff;border-radius:7px;padding:7px 14px;font-size:13px;color:#444;
+    display:flex;align-items:center;gap:8px;}
+  .urlbar .lock{color:var(--green);font-size:11px;}
+
+  /* App */
+  .app{flex:1;overflow-y:auto;}
+  .hdr{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:22px 30px;}
+  .hdr h1{font-size:24px;font-weight:800;letter-spacing:.5px;display:flex;align-items:center;gap:10px;}
+  .hdr .badge{background:var(--copper);font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.5px;}
+  .hdr p{font-size:13px;color:#9fb0c9;margin-top:5px;}
+
+  .body{padding:26px 30px;display:grid;grid-template-columns:340px 1fr;gap:24px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;}
+  .card h2{font-size:15px;color:var(--ink);margin-bottom:16px;font-weight:700;}
+
+  .drop{border:2px dashed var(--blue);border-radius:10px;background:#f0f5ff;
+    padding:30px 16px;text-align:center;cursor:pointer;transition:.25s;}
+  .drop:hover{background:#e6efff;border-color:#2563eb;transform:translateY(-1px);}
+  .drop .ico{font-size:30px;margin-bottom:10px;}
+  .drop .t{font-size:14px;color:#374151;font-weight:600;}
+  .drop .s{font-size:12px;color:var(--sub);margin-top:6px;}
+
+  .filechip{display:none;margin-top:14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;
+    padding:10px 14px;font-size:13px;color:#3730a3;align-items:center;gap:8px;}
+  .filechip.show{display:flex;animation:pop .3s ease;}
+
+  .btn{margin-top:16px;width:100%;background:#cbd5e1;color:#fff;border:none;border-radius:9px;
+    padding:13px;font-size:14px;font-weight:700;cursor:not-allowed;transition:.25s;letter-spacing:.3px;}
+  .btn.ready{background:var(--blue);cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.4);}
+  .btn.ready:hover{background:#2563eb;}
+
+  .settings{margin-top:22px;border-top:1px solid var(--line);padding-top:16px;}
+  .settings .lab{font-size:10px;color:var(--sub);letter-spacing:1px;font-weight:700;margin-bottom:12px;}
+  .srow{font-size:12px;color:#374151;margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+  .srow.on{color:var(--green);}
+
+  /* Results area */
+  .results h2{margin-bottom:16px;}
+  .placeholder{color:var(--sub);font-size:13px;text-align:center;padding:60px 0;border:1px dashed var(--line);border-radius:10px;}
+
+  .proc{display:none;text-align:center;padding:36px 20px;}
+  .proc.show{display:block;}
+  .spinner{width:48px;height:48px;border:4px solid #e5e7eb;border-top-color:var(--blue);
+    border-radius:50%;margin:0 auto 18px;animation:spin .8s linear infinite;}
+  .proc .stage{font-size:14px;color:var(--ink);font-weight:600;min-height:20px;}
+  .proc .frame{font-size:12px;color:var(--sub);margin-top:6px;}
+  .pbar{height:8px;background:#e5e7eb;border-radius:5px;margin:18px auto 0;max-width:360px;overflow:hidden;}
+  .pbar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),#60a5fa);transition:width .2s;}
+
+  .result{display:none;border-radius:11px;padding:24px;border-left:6px solid;animation:slideIn .45s cubic-bezier(.2,.8,.2,1);}
+  .result.show{display:block;}
+  .result.real{background:var(--green-bg);border-left-color:var(--green);}
+  .result.fake{background:var(--red-bg);border-left-color:var(--red);}
+  .result .verdict{font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px;}
+  .result.real .verdict{color:var(--green);}
+  .result.fake .verdict{color:var(--red);}
+  .result .score{font-size:46px;font-weight:800;margin:8px 0 4px;line-height:1;}
+  .result.real .score{color:var(--green);}
+  .result.fake .score{color:var(--red);}
+  .result .clab{font-size:11px;color:var(--sub);letter-spacing:.5px;text-transform:uppercase;}
+  .cbar{height:10px;background:rgba(0,0,0,.06);border-radius:6px;margin:14px 0;overflow:hidden;}
+  .cbar > i{display:block;height:100%;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1);}
+  .result.real .cbar > i{background:var(--green);}
+  .result.fake .cbar > i{background:var(--red);}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;font-size:12px;color:#4b5563;margin-top:14px;}
+  .meta div{display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.05);padding:5px 0;}
+  .meta strong{color:var(--ink);}
+
+  /* Metrics */
+  .metrics{grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .metric{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center;}
+  .metric .mi{font-size:22px;}
+  .metric .ml{font-size:10px;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;font-weight:700;}
+  .metric .mv{font-size:26px;font-weight:800;color:var(--copper);}
+
+  .flow{grid-column:1 / -1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 24px;}
+  .flow h2{font-size:14px;margin-bottom:16px;color:var(--ink);}
+  .steps{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .step{flex:1;min-width:110px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center;}
+  .step.active{background:#fef0e6;border-color:var(--copper);}
+  .step .sn{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;}
+  .step .sd{font-size:13px;color:var(--ink);font-weight:600;margin-top:3px;}
+  .arr{color:#cbd5e1;font-size:18px;}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes slideIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+</head>
+<body>
+<div class="laptop">
+  <div class="screen">
+    <div class="browser">
+      <div class="chrome">
+        <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <div class="urlbar"><span class="lock">🔒</span> triangle.nahidpn.dev</div>
+      </div>
+      <div class="app">
+        <div class="hdr">
+          <h1>🔍 TRIANGLE <span class="badge">LIVE</span></h1>
+          <p>AI-Powered Deepfake Detection • 92% Accuracy • Real-time Analysis</p>
+        </div>
+        <div class="body">
+          <!-- Upload -->
+          <div class="card">
+            <h2>Upload Media</h2>
+            <div class="drop" id="drop">
+              <div class="ico">📤</div>
+              <div class="t">Drag &amp; Drop or Click</div>
+              <div class="s">MP4, JPG, PNG • Max 500MB</div>
+            </div>
+            <div class="filechip" id="chip">🎬 <span id="chipname">interview_clip.mp4</span></div>
+            <button class="btn" id="analyze">Analyze</button>
+            <div class="settings">
+              <div class="lab">SETTINGS</div>
+              <div class="srow on">✓ GPU Processing Enabled</div>
+              <div class="srow on">✓ Real-time Mode</div>
+              <div class="srow">Confidence Threshold: 75%</div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div class="card results">
+            <h2>Detection Results</h2>
+            <div class="placeholder" id="ph">Upload a file and click Analyze to see results</div>
+            <div class="proc" id="proc">
+              <div class="spinner"></div>
+              <div class="stage" id="stage">Detecting faces with MTCNN…</div>
+              <div class="frame" id="fcount">Processing frame 0 / 900</div>
+              <div class="pbar"><i id="pfill"></i></div>
+            </div>
+            <div class="result" id="result">
+              <div class="verdict" id="verdict">✓ REAL</div>
+              <div class="clab">Confidence Score</div>
+              <div class="score" id="score">0%</div>
+              <div class="cbar"><i id="cfill"></i></div>
+              <div class="meta" id="meta"></div>
+            </div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="metrics">
+            <div class="metric"><div class="mi">📊</div><div class="ml">Accuracy</div><div class="mv">92%</div></div>
+            <div class="metric"><div class="mi">⚡</div><div class="ml">Speed</div><div class="mv">&lt;500ms</div></div>
+            <div class="metric"><div class="mi">✓</div><div class="ml">Uptime</div><div class="mv">99.9%</div></div>
+            <div class="metric"><div class="mi">📈</div><div class="ml">Analyzed</div><div class="mv" id="count">15,847</div></div>
+          </div>
+
+          <!-- Flow -->
+          <div class="flow">
+            <h2>How It Works</h2>
+            <div class="steps">
+              <div class="step" id="s1"><div class="sn">Input</div><div class="sd">Image / Video</div></div>
+              <div class="arr">→</div>
+              <div class="step" id="s2"><div class="sn">Face Detection</div><div class="sd">MTCNN</div></div>
+              <div class="arr">→</div>
+              <div class="step" id="s3"><div class="sn">Preprocess</div><div class="sd">Normalize</div></div>
+              <div class="arr">→</div>
+              <div class="step" id="s4"><div class="sn">Analysis</div><div class="sd">CNN • PyTorch</div></div>
+              <div class="arr">→</div>
+              <div class="step" id="s5"><div class="sn">Output</div><div class="sd">Real / Fake</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="laptop-base"></div>
+</div>
+
+<script>
+const drop=document.getElementById('drop'), chip=document.getElementById('chip'),
+  chipname=document.getElementById('chipname'), analyze=document.getElementById('analyze'),
+  ph=document.getElementById('ph'), proc=document.getElementById('proc'), result=document.getElementById('result'),
+  stage=document.getElementById('stage'), fcount=document.getElementById('fcount'), pfill=document.getElementById('pfill'),
+  verdict=document.getElementById('verdict'), score=document.getElementById('score'), cfill=document.getElementById('cfill'),
+  meta=document.getElementById('meta'), countEl=document.getElementById('count');
+
+// Two demo files cycle: first REAL, then FAKE
+const files=[
+  {name:'interview_clip.mp4', fake:false, conf:94, ms:45, faces:1, extra:['Model','CNN-MTCNN v2']},
+  {name:'synthetic_face.mp4', fake:true, conf:88, ms:38, faces:1, extra:['Artifacts','5 detected']}
+];
+let idx=0, fileReady=false, total=15847;
+
+function selectFile(){
+  const f=files[idx];
+  chipname.textContent=f.name;
+  chip.classList.add('show');
+  analyze.classList.add('ready');
+  fileReady=true;
+}
+drop.addEventListener('click',selectFile);
+
+analyze.addEventListener('click',()=>{
+  if(!fileReady) return;
+  const f=files[idx];
+  fileReady=false; analyze.classList.remove('ready');
+  ph.style.display='none'; result.classList.remove('show'); proc.classList.add('show');
+  ['s1','s2','s3','s4','s5'].forEach(s=>document.getElementById(s).classList.remove('active'));
+
+  const stages=[
+    {t:'Detecting faces with MTCNN…', step:'s2'},
+    {t:'Preprocessing frames…', step:'s3'},
+    {t:'Running CNN analysis…', step:'s4'}
+  ];
+  let frame=0, si=0;
+  document.getElementById('s1').classList.add('active');
+
+  const iv=setInterval(()=>{
+    frame+=Math.floor(18+Math.random()*22);
+    if(frame>900) frame=900;
+    fcount.textContent=`Processing frame ${frame} / 900`;
+    pfill.style.width=(frame/900*100)+'%';
+    const ns=Math.min(stages.length-1, Math.floor(frame/300));
+    if(ns!==si){si=ns;}
+    stage.textContent=stages[si].t;
+    document.getElementById(stages[si].step).classList.add('active');
+
+    if(frame>=900){
+      clearInterval(iv);
+      setTimeout(()=>showResult(f),350);
+    }
+  },90);
+});
+
+function showResult(f){
+  proc.classList.remove('show');
+  document.getElementById('s5').classList.add('active');
+  result.className='result show '+(f.fake?'fake':'real');
+  verdict.textContent=f.fake?'✗ FAKE':'✓ REAL';
+  meta.innerHTML=`
+    <div><span>Processing</span><strong>${f.ms}ms</strong></div>
+    <div><span>Faces detected</span><strong>${f.faces}</strong></div>
+    <div><span>${f.extra[0]}</span><strong>${f.extra[1]}</strong></div>
+    <div><span>Status</span><strong>${f.fake?'⚠ Synthetic':'✓ Authentic'}</strong></div>`;
+  // animate score
+  let c=0; score.textContent='0%'; cfill.style.width='0%';
+  const cnt=setInterval(()=>{
+    c+=2; if(c>=f.conf){c=f.conf;clearInterval(cnt);}
+    score.textContent=c+'%';
+  },22);
+  setTimeout(()=>cfill.style.width=f.conf+'%',100);
+  total+=1; countEl.textContent=total.toLocaleString();
+  idx=(idx+1)%files.length; // next click loads the other file
+}
+</script>
+</body>
+</html>
