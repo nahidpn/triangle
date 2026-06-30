@@ -492,7 +492,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Contact & Support
 
-- **Email**: nahid@example.com
+- **Email**: mohammednahidpn@gmail.com
 - **GitHub**: [@nahidpn](https://github.com/nahidpn)
 - **LinkedIn**: [Muhammed Nahid PN](https://linkedin.com/in/muhammed-nahid-pn)
 - **Issues**: [GitHub Issues](https://github.com/nahidpn/triangle/issues)
